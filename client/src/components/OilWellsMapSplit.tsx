@@ -1,21 +1,25 @@
 /**
  * Mapa interactivo de pozos de perforación en Asia.
  *
- * Un único mapa Leaflet persistente (nunca se desmonta) muestra todos los
- * pozos. Al seleccionar uno, la cámara siempre vuela hacia su ubicación con el
- * mismo nivel de zoom — sin importar cuántas veces se haya seleccionado — y un
- * panel de detalle aparece sobre el mapa. Volver a "Ver todo" reencuadra Asia.
+ * Un único mapa Leaflet persistente muestra todos los pozos agrupados en
+ * clústeres (leaflet.markercluster) para mantener el rendimiento con cientos de
+ * marcadores. Al seleccionar un pozo, la cámara siempre vuela hacia su ubicación
+ * con el mismo nivel de zoom y un panel de detalle aparece sobre el mapa.
+ * Los datos se cargan de forma diferida desde un JSON estático.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "leaflet.markercluster";
+import "leaflet.markercluster/dist/MarkerCluster.css";
 import "@/styles/map.css";
-import { OilWell, wells, statusColors, typeIcons } from "@/data/wells";
+import { OilWell, loadWells, statusColors, typeIcons } from "@/data/wells";
 import WellCard from "./WellCard";
 import WellsList from "./WellsList";
 import BrandHeader from "./BrandHeader";
+import { Loader2 } from "lucide-react";
 
 const ASIA_CENTER: L.LatLngTuple = [30, 80];
 const ASIA_ZOOM = 3;
@@ -24,12 +28,34 @@ const FLY_OPTIONS: L.ZoomPanOptions = { duration: 1.4, easeLinearity: 0.22 };
 
 const slugify = (name: string) => name.replace(/\s+/g, "-");
 
+function makeMarkerIcon(well: OilWell): L.DivIcon {
+  return L.divIcon({
+    className: "oil-well-marker",
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
+    html: `<div class="oil-well-marker-icon" style="background-color:${statusColors[well.estatus]}">${typeIcons[well.tipo]}</div>`,
+  });
+}
+
+function makeClusterIcon(cluster: L.MarkerCluster): L.DivIcon {
+  const count = cluster.getChildCount();
+  const size = count < 10 ? 38 : count < 100 ? 46 : 54;
+  return L.divIcon({
+    className: "oil-cluster-wrapper",
+    iconSize: [size, size],
+    html: `<div class="oil-cluster" style="width:${size}px;height:${size}px">${count}</div>`,
+  });
+}
+
 export default function OilWellsMapSplit() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
+  const cluster = useRef<L.MarkerClusterGroup | null>(null);
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
   const urlSyncRef = useRef(false);
 
+  const [wells, setWells] = useState<OilWell[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedWell, setSelectedWell] = useState<OilWell | null>(null);
   const [location, setLocation] = useLocation();
 
@@ -39,7 +65,7 @@ export default function OilWellsMapSplit() {
       activos: wells.filter((w) => w.estatus === "Activo").length,
       perforacion: wells.filter((w) => w.estatus === "En perforación").length,
     }),
-    []
+    [wells]
   );
 
   /** Navegar a un pozo (o a la vista general) y reflejarlo en la URL. */
@@ -55,7 +81,19 @@ export default function OilWellsMapSplit() {
     setLocation("/");
   };
 
-  // 1. Inicializar el mapa una sola vez y mantenerlo montado.
+  // Cargar los datos (diferido).
+  useEffect(() => {
+    let alive = true;
+    loadWells()
+      .then((data) => alive && setWells(data))
+      .catch((err) => console.error("Error cargando pozos:", err))
+      .finally(() => alive && setLoading(false));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // 1. Crear el mapa una sola vez.
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
 
@@ -65,6 +103,7 @@ export default function OilWellsMapSplit() {
       zoomControl: true,
       scrollWheelZoom: true,
       worldCopyJump: true,
+      preferCanvas: true,
     });
     map.current = instance;
 
@@ -74,58 +113,80 @@ export default function OilWellsMapSplit() {
       maxZoom: 19,
     }).addTo(instance);
 
-    wells.forEach((well) => {
-      if (!Number.isFinite(well.lat) || !Number.isFinite(well.lon)) return;
-
-      const icon = L.divIcon({
-        className: "oil-well-marker",
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
-        html: `<div class="oil-well-marker-icon" style="background-color:${statusColors[well.estatus]}">${typeIcons[well.tipo]}</div>`,
-      });
-
-      const marker = L.marker([well.lat, well.lon], { icon, title: well.nombre })
-        .addTo(instance)
-        .bindPopup(
-          `<strong>${well.nombre}</strong><br>${well.pais} · ${well.tipo}`
-        )
-        .on("click", () => selectWell(well));
-
-      markersRef.current.set(well.id, marker);
-    });
-
     return () => {
       instance.remove();
       map.current = null;
+      cluster.current = null;
+      markersRef.current.clear();
+    };
+  }, []);
+
+  // 2. Poblar los marcadores agrupados cuando llegan los datos.
+  useEffect(() => {
+    const instance = map.current;
+    if (!instance || wells.length === 0) return;
+
+    const group = L.markerClusterGroup({
+      chunkedLoading: true,
+      showCoverageOnHover: false,
+      maxClusterRadius: 60,
+      iconCreateFunction: makeClusterIcon,
+    });
+
+    wells.forEach((well) => {
+      if (!Number.isFinite(well.lat) || !Number.isFinite(well.lon)) return;
+
+      const marker = L.marker([well.lat, well.lon], {
+        icon: makeMarkerIcon(well),
+        title: well.nombre,
+      })
+        .bindPopup(`<strong>${well.nombre}</strong><br>${well.pais} · ${well.tipo}`)
+        .on("click", () => selectWell(well));
+
+      markersRef.current.set(well.id, marker);
+      group.addLayer(marker);
+    });
+
+    instance.addLayer(group);
+    cluster.current = group;
+
+    return () => {
+      instance.removeLayer(group);
+      cluster.current = null;
       markersRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [wells]);
 
-  // 2. Mover la cámara y resaltar el marcador cada vez que cambia la selección.
+  // 3. Mover la cámara y resaltar el marcador al cambiar la selección.
   useEffect(() => {
     const instance = map.current;
     if (!instance) return;
 
-    markersRef.current.forEach((marker, id) => {
-      const selected = selectedWell?.id === id;
-      marker.setZIndexOffset(selected ? 1000 : 0);
-      const el = marker
-        .getElement()
-        ?.querySelector<HTMLElement>(".oil-well-marker-icon");
-      el?.classList.toggle("marker-selected", selected);
-    });
+    const applyHighlight = () => {
+      markersRef.current.forEach((marker, id) => {
+        const selected = selectedWell?.id === id;
+        marker.setZIndexOffset(selected ? 1000 : 0);
+        const el = marker
+          .getElement()
+          ?.querySelector<HTMLElement>(".oil-well-marker-icon");
+        el?.classList.toggle("marker-selected", selected);
+      });
+    };
 
     instance.closePopup();
+    applyHighlight();
+    // Reaplicar tras el vuelo: el marcador puede salir de un clúster al hacer zoom.
+    instance.once("moveend", applyHighlight);
 
     if (selectedWell) {
       instance.flyTo([selectedWell.lat, selectedWell.lon], WELL_ZOOM, FLY_OPTIONS);
     } else {
       instance.flyTo(ASIA_CENTER, ASIA_ZOOM, FLY_OPTIONS);
     }
-  }, [selectedWell]);
+  }, [selectedWell, wells]);
 
-  // 3. Sincronizar con la URL (botones Atrás/Adelante del navegador).
+  // 4. Sincronizar con la URL (Atrás/Adelante del navegador).
   useEffect(() => {
     if (urlSyncRef.current) {
       urlSyncRef.current = false;
@@ -141,7 +202,7 @@ export default function OilWellsMapSplit() {
     } else if (!wellName && selectedWell) {
       setSelectedWell(null);
     }
-  }, [location, selectedWell]);
+  }, [location, selectedWell, wells]);
 
   return (
     <div className="relative flex h-screen w-full overflow-hidden bg-background">
@@ -155,11 +216,15 @@ export default function OilWellsMapSplit() {
             <Stat value={stats.perforacion} label="Perforando" accent="#F59E0B" />
           </dl>
         </header>
-        <WellsList
-          wells={wells}
-          onSelectWell={selectWell}
-          selectedId={selectedWell?.id ?? null}
-        />
+        {loading ? (
+          <ListLoader />
+        ) : (
+          <WellsList
+            wells={wells}
+            onSelectWell={selectWell}
+            selectedId={selectedWell?.id ?? null}
+          />
+        )}
       </aside>
 
       {/* Columna del mapa */}
@@ -170,6 +235,14 @@ export default function OilWellsMapSplit() {
         <div className="pointer-events-none absolute left-3 top-3 z-[500] rounded-xl border border-border/70 bg-card/90 px-4 py-2.5 shadow-md backdrop-blur-sm md:hidden">
           <BrandHeader compact />
         </div>
+
+        {/* Indicador de carga sobre el mapa */}
+        {loading && (
+          <div className="pointer-events-none absolute left-1/2 top-4 z-[500] flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/90 px-4 py-2 text-sm font-medium text-muted-foreground shadow-md backdrop-blur-sm">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Cargando pozos…
+          </div>
+        )}
 
         {/* Panel de detalle sobre el mapa */}
         {selectedWell && (
@@ -208,6 +281,15 @@ function Stat({
       <dd className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </dd>
+    </div>
+  );
+}
+
+function ListLoader() {
+  return (
+    <div className="flex flex-1 items-center justify-center gap-2 text-sm text-muted-foreground">
+      <Loader2 className="h-4 w-4 animate-spin" />
+      Cargando…
     </div>
   );
 }

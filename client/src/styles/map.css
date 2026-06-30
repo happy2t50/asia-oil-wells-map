@@ -59,6 +59,31 @@
   }
 }
 
+/* Clústeres de marcadores (estilo de marca) */
+.oil-cluster-wrapper {
+  background: transparent;
+  border: none;
+}
+
+.oil-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(184, 94, 214, 0.92);
+  color: #ffffff;
+  font-family: "Inter", sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  border: 3px solid #ffffff;
+  box-shadow: 0 3px 12px rgba(113, 58, 132, 0.45);
+  transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.oil-cluster-wrapper:hover .oil-cluster {
+  transform: scale(1.1);
+}
+
 /* Popups de Leaflet */
 .leaflet-popup-content-wrapper {
   border-radius: 12px;
