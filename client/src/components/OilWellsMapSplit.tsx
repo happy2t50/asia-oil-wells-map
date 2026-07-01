@@ -16,7 +16,13 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "@/styles/map.css";
-import { OilWell, loadWells, statusColors, typeIcons } from "@/data/wells";
+import { OilWell, loadWells, typeIconSvg } from "@/data/wells";
+import {
+  getWellColor,
+  isLightColor,
+  STATUS_ORDER,
+  STATUS_STYLE,
+} from "@/lib/wellStyle";
 import WellCard from "./WellCard";
 import WellsList, { type TypeFilter, type StatusFilter } from "./WellsList";
 import BrandHeader from "./BrandHeader";
@@ -30,11 +36,15 @@ const FLY_OPTIONS: L.ZoomPanOptions = { duration: 1.4, easeLinearity: 0.22 };
 const slugify = (name: string) => name.replace(/\s+/g, "-");
 
 function makeMarkerIcon(well: OilWell): L.DivIcon {
+  const bg = getWellColor(well);
+  const light = isLightColor(bg);
+  const stroke = light ? "#2D2D2D" : "#FFFFFF";
+  const border = light ? "#C9C4BC" : "#FFFFFF";
   return L.divIcon({
     className: "oil-well-marker",
     iconSize: [40, 40],
     iconAnchor: [20, 20],
-    html: `<div class="oil-well-marker-icon" style="background-color:${statusColors[well.estatus]}">${typeIcons[well.tipo]}</div>`,
+    html: `<div class="oil-well-marker-icon" style="background-color:${bg};border-color:${border}">${typeIconSvg(well.tipo, stroke)}</div>`,
   });
 }
 
@@ -273,6 +283,27 @@ export default function OilWellsMapSplit() {
           <div className="pointer-events-none absolute left-1/2 top-4 z-[500] flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/90 px-4 py-2 text-sm font-medium text-muted-foreground shadow-md backdrop-blur-sm">
             <Loader2 className="h-4 w-4 animate-spin" />
             Cargando pozos…
+          </div>
+        )}
+
+        {/* Leyenda de estatus */}
+        {!loading && (
+          <div className="absolute bottom-6 left-3 z-[500] hidden rounded-xl border border-border bg-card/90 p-3 text-xs shadow-md backdrop-blur-sm md:block">
+            <p className="mb-1.5 font-semibold text-foreground">Estatus</p>
+            <ul className="space-y-1">
+              {STATUS_ORDER.map((key) => (
+                <li
+                  key={key}
+                  className="flex items-center gap-2 text-muted-foreground"
+                >
+                  <span
+                    className="h-2.5 w-2.5 flex-shrink-0 rounded-full border border-border"
+                    style={{ backgroundColor: STATUS_STYLE[key].color }}
+                  />
+                  {STATUS_STYLE[key].label}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 

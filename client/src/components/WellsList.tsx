@@ -3,7 +3,8 @@
  */
 
 import { useMemo, useState } from "react";
-import { OilWell, statusColors } from "@/data/wells";
+import { OilWell } from "@/data/wells";
+import { getWellColor } from "@/lib/wellStyle";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Search, Factory, Waves, ArrowDownToLine } from "lucide-react";
@@ -111,8 +112,8 @@ export default function WellsList({
                   >
                     <div className="flex items-start gap-2.5">
                       <span
-                        className="mt-1.5 h-2.5 w-2.5 flex-shrink-0 rounded-full ring-2 ring-card"
-                        style={{ backgroundColor: statusColors[well.estatus] }}
+                        className="mt-1.5 h-2.5 w-2.5 flex-shrink-0 rounded-full border border-border ring-2 ring-card"
+                        style={{ backgroundColor: getWellColor(well) }}
                       />
                       <div className="min-w-0 flex-1">
                         <p

@@ -22,22 +22,21 @@ export interface OilWell {
   descripcion: string;
 }
 
-export const statusColors: Record<string, string> = {
-  "Activo": "#B85ED6",
-  "En perforación": "#F59E0B",
-  "Inactivo": "#9CA3AF",
+// Trazados (Lucide) para los iconos de tipo de pozo.
+const TYPE_ICON_PATHS: Record<OilWell["tipo"], string> = {
+  // "factory" — instalación terrestre
+  "Terrestre": `<path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M17 18h1"/><path d="M12 18h1"/><path d="M7 18h1"/>`,
+  // "waves" — instalación costa afuera
+  "Costa afuera": `<path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>`,
 };
 
 /**
- * Iconografía de marcadores (SVG estilo Lucide, trazo blanco) por tipo de pozo.
- * Sustituye a los emojis previos para una apariencia profesional y consistente.
+ * SVG del icono de tipo de pozo con color de trazo configurable, para asegurar
+ * contraste sobre marcadores claros (amarillo/blanco) u oscuros.
  */
-export const typeIcons: Record<OilWell["tipo"], string> = {
-  // Lucide "factory" — instalación terrestre
-  "Terrestre": `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M17 18h1"/><path d="M12 18h1"/><path d="M7 18h1"/></svg>`,
-  // Lucide "waves" — instalación costa afuera
-  "Costa afuera": `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>`,
-};
+export function typeIconSvg(tipo: OilWell["tipo"], stroke = "#FFFFFF"): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${TYPE_ICON_PATHS[tipo]}</svg>`;
+}
 
 let cache: OilWell[] | null = null;
 

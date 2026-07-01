@@ -1,16 +1,20 @@
 /**
- * Tarjeta de detalle de un pozo: imagen, estatus, descripción y ficha técnica.
+ * Tarjeta de detalle de un pozo: marca del operador, estatus, descripción y
+ * ficha técnica.
  */
 
-import { useMemo } from "react";
-import { OilWell, statusColors } from "@/data/wells";
-import { getWellImage, getWellPlaceholder } from "@/lib/wellImages";
+import { OilWell } from "@/data/wells";
+import {
+  getWellColor,
+  getWellStatusLabel,
+  operatorColor,
+  operatorInitials,
+} from "@/lib/wellStyle";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
   Factory,
   Waves,
-  Building2,
   CalendarDays,
   ArrowDownToLine,
   Gauge,
@@ -24,9 +28,11 @@ interface WellCardProps {
 }
 
 export default function WellCard({ well, onBack }: WellCardProps) {
-  const imageSrc = useMemo(() => getWellImage(well), [well]);
   const TypeIcon = well.tipo === "Costa afuera" ? Waves : Factory;
-  const statusColor = statusColors[well.estatus];
+  const statusColor = getWellColor(well);
+  const statusLabel = getWellStatusLabel(well);
+  const opColor = operatorColor(well.operador);
+  const initials = operatorInitials(well.operador);
 
   return (
     <div className="flex h-full flex-col bg-card">
@@ -47,39 +53,47 @@ export default function WellCard({ well, onBack }: WellCardProps) {
 
       {/* Contenido */}
       <div className="min-h-0 flex-1 overflow-y-auto p-5">
-        {/* Imagen */}
-        <div className="relative mb-5 overflow-hidden rounded-xl bg-muted shadow-md">
-          <img
-            src={imageSrc}
-            alt={`Instalación ${well.tipo.toLowerCase()} — ${well.nombre}`}
-            loading="lazy"
-            className="h-56 w-full object-cover transition-transform duration-500 hover:scale-105"
-            onError={(e) => {
-              const img = e.currentTarget;
-              img.onerror = null;
-              img.src = getWellPlaceholder(well);
-            }}
-          />
-          <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-card/90 px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm backdrop-blur-sm">
-            <TypeIcon className="h-3.5 w-3.5" />
-            {well.tipo}
-          </span>
+        {/* Marca del operador */}
+        <div
+          className="relative flex items-center gap-4 overflow-hidden rounded-xl border border-border p-4"
+          style={{
+            background: `linear-gradient(135deg, ${opColor}22, transparent 70%)`,
+          }}
+        >
+          <div
+            className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl text-lg font-bold tracking-tight text-white shadow-md"
+            style={{ backgroundColor: opColor }}
+          >
+            {initials}
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Operador
+            </p>
+            <p className="truncate text-lg font-bold leading-tight text-foreground">
+              {well.operador}
+            </p>
+            <span className="mt-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+              <TypeIcon className="h-3.5 w-3.5" />
+              {well.tipo}
+            </span>
+          </div>
         </div>
 
         {/* Nombre y estatus */}
-        <h2 className="text-2xl font-bold leading-tight text-foreground">
+        <h2 className="mt-5 text-2xl font-bold leading-tight text-foreground">
           {well.nombre}
         </h2>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span
             className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
-            style={{ backgroundColor: `${statusColor}1a`, color: statusColor }}
+            style={{ backgroundColor: `${statusColor}1f`, color: "#2D2D2D" }}
           >
             <span
-              className="h-2 w-2 rounded-full"
+              className="h-2 w-2 rounded-full border border-border"
               style={{ backgroundColor: statusColor }}
             />
-            {well.estatus}
+            {statusLabel}
           </span>
           <span className="text-sm text-muted-foreground">{well.pais}</span>
         </div>
@@ -91,21 +105,21 @@ export default function WellCard({ well, onBack }: WellCardProps) {
 
         {/* Ficha técnica */}
         <div className="mt-4 grid grid-cols-2 gap-2.5 border-t border-border pt-4">
-          <DataTile icon={TypeIcon} label="Tipo" value={well.tipo} />
-          <DataTile icon={Building2} label="Operador" value={well.operador} />
           <DataTile icon={CalendarDays} label="Inicio" value={String(well.inicio)} />
           <DataTile
             icon={ArrowDownToLine}
             label="Profundidad"
             value={`${well.profundidad_m.toLocaleString()} m`}
           />
-          {well.produccion_bpd != null && (
-            <DataTile
-              icon={Gauge}
-              label="Producción"
-              value={`${(well.produccion_bpd / 1_000_000).toFixed(1)}M bpd`}
-            />
-          )}
+          <DataTile
+            icon={Gauge}
+            label="Producción"
+            value={
+              well.produccion_bpd != null
+                ? `${(well.produccion_bpd / 1_000_000).toFixed(1)}M bpd`
+                : "Sin producción"
+            }
+          />
           <DataTile
             icon={MapPin}
             label="Coordenadas"
