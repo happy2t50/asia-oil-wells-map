@@ -26,6 +26,7 @@ import {
 import WellCard from "./WellCard";
 import WellsList, { type TypeFilter, type StatusFilter } from "./WellsList";
 import BrandHeader from "./BrandHeader";
+import HelpDialog from "./HelpDialog";
 import { Loader2, Factory, Waves } from "lucide-react";
 
 const ASIA_CENTER: L.LatLngTuple = [30, 80];
@@ -277,6 +278,13 @@ export default function OilWellsMapSplit() {
         <div className="pointer-events-none absolute left-3 top-3 z-[500] rounded-xl border border-border/70 bg-card/90 px-4 py-2.5 shadow-md backdrop-blur-sm md:hidden">
           <BrandHeader compact />
         </div>
+
+        {/* Botón de ayuda / simbología */}
+        {!selectedWell && (
+          <div className="absolute right-3 top-3 z-[500]">
+            <HelpDialog />
+          </div>
+        )}
 
         {/* Indicador de carga sobre el mapa */}
         {loading && (
