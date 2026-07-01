@@ -30,9 +30,9 @@
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
 }
 
-/* Marcador seleccionado: realce con pulso */
+/* Marcador seleccionado: realce con pulso (acento teal, frío) */
 .oil-well-marker-icon.marker-selected {
-  filter: drop-shadow(0 0 12px rgba(184, 94, 214, 0.9));
+  filter: drop-shadow(0 0 12px rgba(13, 148, 136, 0.9));
   animation: pulseMarker 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
@@ -51,11 +51,11 @@
   0%,
   100% {
     transform: scale(1.32);
-    filter: drop-shadow(0 0 12px rgba(184, 94, 214, 0.9));
+    filter: drop-shadow(0 0 12px rgba(13, 148, 136, 0.9));
   }
   50% {
     transform: scale(1.45);
-    filter: drop-shadow(0 0 22px rgba(184, 94, 214, 0.55));
+    filter: drop-shadow(0 0 22px rgba(13, 148, 136, 0.55));
   }
 }
 
@@ -70,13 +70,13 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(184, 94, 214, 0.92);
+  background: rgba(51, 65, 85, 0.92);
   color: #ffffff;
   font-family: "Inter", sans-serif;
   font-weight: 700;
   font-size: 13px;
   border: 3px solid #ffffff;
-  box-shadow: 0 3px 12px rgba(113, 58, 132, 0.45);
+  box-shadow: 0 3px 12px rgba(30, 41, 59, 0.45);
   transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
 }
 

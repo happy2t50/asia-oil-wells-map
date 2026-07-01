@@ -12,9 +12,9 @@ export const STATUS_STYLE: Record<
   WellCategory,
   { color: string; label: string }
 > = {
-  produciendo: { color: "#F97316", label: "Activo y produciendo" }, // naranja
-  activo: { color: "#EF4444", label: "Activo" }, // rojo
-  perforando: { color: "#FACC15", label: "En perforación" }, // amarillo
+  produciendo: { color: "#EF4444", label: "Activo y produciendo" }, // rojo
+  activo: { color: "#FACC15", label: "Activo" }, // amarillo
+  perforando: { color: "#F97316", label: "En perforación" }, // naranja
   inactivo: { color: "#FFFFFF", label: "Inactivo" }, // blanco
 };
 
@@ -52,9 +52,10 @@ export function isLightColor(hex: string): boolean {
 
 // ---- Avatar de marca del operador ----
 
+// Paleta sobria y fría para los avatares de operador (sin morado).
 const AVATAR_COLORS = [
-  "#713A84", "#B85ED6", "#2563EB", "#0EA5E9", "#0D9488", "#16A34A",
-  "#CA8A04", "#DC2626", "#EA580C", "#DB2777", "#4F46E5", "#0891B2",
+  "#334155", "#0D9488", "#2563EB", "#0EA5E9", "#0F766E", "#16A34A",
+  "#CA8A04", "#DC2626", "#EA580C", "#475569", "#0891B2", "#4338CA",
 ];
 
 const STOP_WORDS = new Set([

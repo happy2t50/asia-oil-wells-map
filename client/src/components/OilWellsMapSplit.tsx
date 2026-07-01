@@ -26,7 +26,7 @@ import {
 import WellCard from "./WellCard";
 import WellsList, { type TypeFilter, type StatusFilter } from "./WellsList";
 import BrandHeader from "./BrandHeader";
-import { Loader2 } from "lucide-react";
+import { Loader2, Factory, Waves } from "lucide-react";
 
 const ASIA_CENTER: L.LatLngTuple = [30, 80];
 const ASIA_ZOOM = 3;
@@ -250,8 +250,8 @@ export default function OilWellsMapSplit() {
           <BrandHeader />
           <dl className="mt-4 grid grid-cols-3 gap-2">
             <Stat value={stats.total} label="Pozos" />
-            <Stat value={stats.activos} label="Activos" accent="#B85ED6" />
-            <Stat value={stats.perforacion} label="Perforando" accent="#F59E0B" />
+            <Stat value={stats.activos} label="Activos" accent="#EF4444" />
+            <Stat value={stats.perforacion} label="Perforando" accent="#F97316" />
           </dl>
         </header>
         {loading ? (
@@ -286,9 +286,9 @@ export default function OilWellsMapSplit() {
           </div>
         )}
 
-        {/* Leyenda de estatus */}
+        {/* Leyenda / simbología */}
         {!loading && (
-          <div className="absolute bottom-6 left-3 z-[500] hidden rounded-xl border border-border bg-card/90 p-3 text-xs shadow-md backdrop-blur-sm md:block">
+          <div className="absolute bottom-6 left-3 z-[500] hidden w-52 rounded-xl border border-border bg-card/90 p-3 text-xs shadow-md backdrop-blur-sm md:block">
             <p className="mb-1.5 font-semibold text-foreground">Estatus</p>
             <ul className="space-y-1">
               {STATUS_ORDER.map((key) => (
@@ -304,6 +304,23 @@ export default function OilWellsMapSplit() {
                 </li>
               ))}
             </ul>
+
+            <p className="mb-1.5 mt-3 font-semibold text-foreground">Tipo</p>
+            <ul className="space-y-1 text-muted-foreground">
+              <li className="flex items-center gap-2">
+                <Factory className="h-3.5 w-3.5 flex-shrink-0" />
+                Terrestre
+              </li>
+              <li className="flex items-center gap-2">
+                <Waves className="h-3.5 w-3.5 flex-shrink-0" />
+                Costa afuera
+              </li>
+            </ul>
+
+            <p className="mt-3 border-t border-border pt-2 text-[11px] leading-snug text-muted-foreground">
+              Los círculos con número agrupan pozos cercanos; acércate para
+              separarlos.
+            </p>
           </div>
         )}
 

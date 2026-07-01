@@ -26,20 +26,20 @@ export default function BrandHeader({ compact = false }: BrandHeaderProps) {
             cy="20"
             r="18"
             fill="none"
-            stroke="#B85ED6"
+            stroke="#334155"
             strokeWidth="1.5"
           />
 
           {/* Puntos cardinales */}
-          <line x1="20" y1="4" x2="20" y2="8" stroke="#B85ED6" strokeWidth="1.5" />
-          <line x1="20" y1="32" x2="20" y2="36" stroke="#B85ED6" strokeWidth="1.5" />
-          <line x1="4" y1="20" x2="8" y2="20" stroke="#B85ED6" strokeWidth="1.5" />
-          <line x1="32" y1="20" x2="36" y2="20" stroke="#B85ED6" strokeWidth="1.5" />
+          <line x1="20" y1="4" x2="20" y2="8" stroke="#334155" strokeWidth="1.5" />
+          <line x1="20" y1="32" x2="20" y2="36" stroke="#334155" strokeWidth="1.5" />
+          <line x1="4" y1="20" x2="8" y2="20" stroke="#334155" strokeWidth="1.5" />
+          <line x1="32" y1="20" x2="36" y2="20" stroke="#334155" strokeWidth="1.5" />
 
           {/* Gota de petróleo en el centro */}
           <path
             d="M 20 10 C 18 12 16 15 16 18 C 16 22 17.8 25 20 25 C 22.2 25 24 22 24 18 C 24 15 22 12 20 10 Z"
-            fill="#B85ED6"
+            fill="#334155"
           />
 
           {/* Brillo en la gota */}
