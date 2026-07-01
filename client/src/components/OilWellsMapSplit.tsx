@@ -1,10 +1,11 @@
 /**
  * Mapa interactivo de pozos de perforación en Asia.
  *
- * Un único mapa Leaflet persistente muestra todos los pozos agrupados en
- * clústeres (leaflet.markercluster) para mantener el rendimiento con cientos de
- * marcadores. Al seleccionar un pozo, la cámara siempre vuela hacia su ubicación
- * con el mismo nivel de zoom y un panel de detalle aparece sobre el mapa.
+ * Un único mapa Leaflet persistente muestra los pozos agrupados en clústeres
+ * (leaflet.markercluster) para mantener el rendimiento con cientos de marcadores.
+ * Los filtros de tipo y estatus se aplican tanto a la lista como al mapa: al
+ * elegir "Terrestre" solo se ven/agrupan los terrestres, y así con cada filtro.
+ * Al seleccionar un pozo, la cámara vuela a su ubicación y aparece el detalle.
  * Los datos se cargan de forma diferida desde un JSON estático.
  */
 
@@ -17,7 +18,7 @@ import "leaflet.markercluster/dist/MarkerCluster.css";
 import "@/styles/map.css";
 import { OilWell, loadWells, statusColors, typeIcons } from "@/data/wells";
 import WellCard from "./WellCard";
-import WellsList from "./WellsList";
+import WellsList, { type TypeFilter, type StatusFilter } from "./WellsList";
 import BrandHeader from "./BrandHeader";
 import { Loader2 } from "lucide-react";
 
@@ -47,6 +48,21 @@ function makeClusterIcon(cluster: L.MarkerCluster): L.DivIcon {
   });
 }
 
+/** Aplica el resaltado (pulso) al marcador seleccionado. */
+function highlightMarkers(
+  markers: Map<string, L.Marker>,
+  selectedId: string | null
+) {
+  markers.forEach((marker, id) => {
+    const selected = selectedId === id;
+    marker.setZIndexOffset(selected ? 1000 : 0);
+    const el = marker
+      .getElement()
+      ?.querySelector<HTMLElement>(".oil-well-marker-icon");
+    el?.classList.toggle("marker-selected", selected);
+  });
+}
+
 export default function OilWellsMapSplit() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
@@ -57,7 +73,25 @@ export default function OilWellsMapSplit() {
   const [wells, setWells] = useState<OilWell[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedWell, setSelectedWell] = useState<OilWell | null>(null);
+  const [filterType, setFilterType] = useState<TypeFilter>("Todos");
+  const [filterStatus, setFilterStatus] = useState<StatusFilter>("Todos");
   const [location, setLocation] = useLocation();
+
+  // Ref con el id seleccionado para reaplicar el resaltado tras reconstruir
+  // los clústeres sin re-ejecutar todo el efecto por cada selección.
+  const selectedIdRef = useRef<string | null>(null);
+  selectedIdRef.current = selectedWell?.id ?? null;
+
+  // Pozos que se muestran en el MAPA (filtrados por tipo y estatus).
+  const mapWells = useMemo(
+    () =>
+      wells.filter(
+        (w) =>
+          (filterType === "Todos" || w.tipo === filterType) &&
+          (filterStatus === "Todos" || w.estatus === filterStatus)
+      ),
+    [wells, filterType, filterStatus]
+  );
 
   const stats = useMemo(
     () => ({
@@ -103,7 +137,6 @@ export default function OilWellsMapSplit() {
       zoomControl: true,
       scrollWheelZoom: true,
       worldCopyJump: true,
-      preferCanvas: true,
     });
     map.current = instance;
 
@@ -121,10 +154,10 @@ export default function OilWellsMapSplit() {
     };
   }, []);
 
-  // 2. Poblar los marcadores agrupados cuando llegan los datos.
+  // 2. (Re)construir los marcadores agrupados según los pozos filtrados.
   useEffect(() => {
     const instance = map.current;
-    if (!instance || wells.length === 0) return;
+    if (!instance) return;
 
     const group = L.markerClusterGroup({
       chunkedLoading: true,
@@ -133,7 +166,8 @@ export default function OilWellsMapSplit() {
       iconCreateFunction: makeClusterIcon,
     });
 
-    wells.forEach((well) => {
+    markersRef.current.clear();
+    mapWells.forEach((well) => {
       if (!Number.isFinite(well.lat) || !Number.isFinite(well.lon)) return;
 
       const marker = L.marker([well.lat, well.lon], {
@@ -149,6 +183,8 @@ export default function OilWellsMapSplit() {
 
     instance.addLayer(group);
     cluster.current = group;
+    // Reaplicar el resaltado al pozo activo (si sigue visible tras el filtro).
+    highlightMarkers(markersRef.current, selectedIdRef.current);
 
     return () => {
       instance.removeLayer(group);
@@ -156,35 +192,27 @@ export default function OilWellsMapSplit() {
       markersRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wells]);
+  }, [mapWells]);
 
   // 3. Mover la cámara y resaltar el marcador al cambiar la selección.
   useEffect(() => {
     const instance = map.current;
     if (!instance) return;
 
-    const applyHighlight = () => {
-      markersRef.current.forEach((marker, id) => {
-        const selected = selectedWell?.id === id;
-        marker.setZIndexOffset(selected ? 1000 : 0);
-        const el = marker
-          .getElement()
-          ?.querySelector<HTMLElement>(".oil-well-marker-icon");
-        el?.classList.toggle("marker-selected", selected);
-      });
-    };
-
+    const selectedId = selectedWell?.id ?? null;
     instance.closePopup();
-    applyHighlight();
+    highlightMarkers(markersRef.current, selectedId);
     // Reaplicar tras el vuelo: el marcador puede salir de un clúster al hacer zoom.
-    instance.once("moveend", applyHighlight);
+    instance.once("moveend", () =>
+      highlightMarkers(markersRef.current, selectedId)
+    );
 
     if (selectedWell) {
       instance.flyTo([selectedWell.lat, selectedWell.lon], WELL_ZOOM, FLY_OPTIONS);
     } else {
       instance.flyTo(ASIA_CENTER, ASIA_ZOOM, FLY_OPTIONS);
     }
-  }, [selectedWell, wells]);
+  }, [selectedWell]);
 
   // 4. Sincronizar con la URL (Atrás/Adelante del navegador).
   useEffect(() => {
@@ -223,6 +251,10 @@ export default function OilWellsMapSplit() {
             wells={wells}
             onSelectWell={selectWell}
             selectedId={selectedWell?.id ?? null}
+            filterType={filterType}
+            filterStatus={filterStatus}
+            onFilterTypeChange={setFilterType}
+            onFilterStatusChange={setFilterStatus}
           />
         )}
       </aside>
@@ -241,6 +273,13 @@ export default function OilWellsMapSplit() {
           <div className="pointer-events-none absolute left-1/2 top-4 z-[500] flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/90 px-4 py-2 text-sm font-medium text-muted-foreground shadow-md backdrop-blur-sm">
             <Loader2 className="h-4 w-4 animate-spin" />
             Cargando pozos…
+          </div>
+        )}
+
+        {/* Contador de pozos visibles cuando hay filtro activo */}
+        {!loading && (filterType !== "Todos" || filterStatus !== "Todos") && (
+          <div className="pointer-events-none absolute bottom-6 left-1/2 z-[500] -translate-x-1/2 rounded-full border border-border bg-card/90 px-4 py-1.5 text-xs font-semibold text-foreground shadow-md backdrop-blur-sm">
+            {mapWells.length} pozos en el mapa
           </div>
         )}
 

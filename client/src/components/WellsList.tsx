@@ -8,13 +8,18 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Search, Factory, Waves, ArrowDownToLine } from "lucide-react";
 
-type TypeFilter = "Todos" | OilWell["tipo"];
-type StatusFilter = "Todos" | OilWell["estatus"];
+export type TypeFilter = "Todos" | OilWell["tipo"];
+export type StatusFilter = "Todos" | OilWell["estatus"];
 
 interface WellsListProps {
   wells: OilWell[];
   onSelectWell: (well: OilWell) => void;
   selectedId: string | null;
+  /** Filtros controlados por el padre (se aplican también al mapa). */
+  filterType: TypeFilter;
+  filterStatus: StatusFilter;
+  onFilterTypeChange: (value: TypeFilter) => void;
+  onFilterStatusChange: (value: StatusFilter) => void;
 }
 
 const TYPE_FILTERS: TypeFilter[] = ["Todos", "Terrestre", "Costa afuera"];
@@ -29,10 +34,12 @@ export default function WellsList({
   wells,
   onSelectWell,
   selectedId,
+  filterType,
+  filterStatus,
+  onFilterTypeChange,
+  onFilterStatusChange,
 }: WellsListProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState<TypeFilter>("Todos");
-  const [filterStatus, setFilterStatus] = useState<StatusFilter>("Todos");
 
   const filteredWells = useMemo(() => {
     const term = searchTerm.toLowerCase();
@@ -69,13 +76,13 @@ export default function WellsList({
           label="Tipo"
           options={TYPE_FILTERS}
           value={filterType}
-          onChange={setFilterType}
+          onChange={onFilterTypeChange}
         />
         <FilterRow
           label="Estatus"
           options={STATUS_FILTERS}
           value={filterStatus}
-          onChange={setFilterStatus}
+          onChange={onFilterStatusChange}
         />
       </div>
 
