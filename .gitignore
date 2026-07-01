@@ -108,7 +108,10 @@ temp/
 # Webdev artifacts (checkpoint zips, migrations, etc.)
 .webdev/
 
-# Manus version file (auto-generated, not part of source)
-client/public/__manus__/version.json
+# Herramientas de desarrollo / plataforma (no forman parte del código fuente)
+client/public/__manus__/
 .project-config.json
 .manus-logs/
+
+# Configuración local de preview del editor
+.claude/
