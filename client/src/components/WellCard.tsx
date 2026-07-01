@@ -17,17 +17,19 @@ import {
   Waves,
   CalendarDays,
   ArrowDownToLine,
-  Gauge,
+  Drill,
   MapPin,
+  Minimize2,
   type LucideIcon,
 } from "lucide-react";
 
 interface WellCardProps {
   well: OilWell;
   onBack: () => void;
+  onCollapse?: () => void;
 }
 
-export default function WellCard({ well, onBack }: WellCardProps) {
+export default function WellCard({ well, onBack, onCollapse }: WellCardProps) {
   const TypeIcon = well.tipo === "Costa afuera" ? Waves : Factory;
   const statusColor = getWellColor(well);
   const statusLabel = getWellStatusLabel(well);
@@ -42,13 +44,24 @@ export default function WellCard({ well, onBack }: WellCardProps) {
           <MapPin className="h-3.5 w-3.5" />
           Detalle del pozo
         </p>
-        <button
-          onClick={onBack}
-          aria-label="Cerrar detalle"
-          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
+        <div className="flex items-center gap-1">
+          {onCollapse && (
+            <button
+              onClick={onCollapse}
+              aria-label="Contraer panel"
+              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Minimize2 className="h-5 w-5" />
+            </button>
+          )}
+          <button
+            onClick={onBack}
+            aria-label="Cerrar detalle"
+            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+        </div>
       </div>
 
       {/* Contenido */}
@@ -111,15 +124,7 @@ export default function WellCard({ well, onBack }: WellCardProps) {
             label="Profundidad"
             value={`${well.profundidad_m.toLocaleString()} m`}
           />
-          <DataTile
-            icon={Gauge}
-            label="Producción"
-            value={
-              well.produccion_bpd != null
-                ? `${(well.produccion_bpd / 1_000_000).toFixed(1)}M bpd`
-                : "Sin producción"
-            }
-          />
+          <DataTile icon={Drill} label="Estatus" value={statusLabel} />
           <DataTile
             icon={MapPin}
             label="Coordenadas"

@@ -5,34 +5,26 @@
 
 import type { OilWell } from "@/data/wells";
 
-export type WellCategory = "produciendo" | "activo" | "perforando" | "inactivo";
+export type WellCategory = "perforando" | "activo" | "inactivo";
 
 /** Colores y etiquetas por categoría de estatus. */
 export const STATUS_STYLE: Record<
   WellCategory,
   { color: string; label: string }
 > = {
-  produciendo: { color: "#EF4444", label: "Activo y produciendo" }, // rojo
-  activo: { color: "#FACC15", label: "Activo" }, // amarillo
   perforando: { color: "#F97316", label: "En perforación" }, // naranja
+  activo: { color: "#FACC15", label: "Activo" }, // amarillo
   inactivo: { color: "#FFFFFF", label: "Inactivo" }, // blanco
 };
 
 /** Orden para leyendas/listas. */
-export const STATUS_ORDER: WellCategory[] = [
-  "produciendo",
-  "activo",
-  "perforando",
-  "inactivo",
-];
+export const STATUS_ORDER: WellCategory[] = ["perforando", "activo", "inactivo"];
 
-/** Categoría efectiva: "Activo" se divide en produciendo/activo según producción. */
+/** Categoría de estatus del pozo. */
 export function getWellCategory(well: OilWell): WellCategory {
   if (well.estatus === "Inactivo") return "inactivo";
   if (well.estatus === "En perforación") return "perforando";
-  return well.produccion_bpd && well.produccion_bpd > 0
-    ? "produciendo"
-    : "activo";
+  return "activo";
 }
 
 export const getWellColor = (well: OilWell): string =>

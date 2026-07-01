@@ -1,12 +1,10 @@
 /**
  * Mapa interactivo de pozos de perforación en Asia.
  *
- * Un único mapa Leaflet persistente muestra los pozos agrupados en clústeres
- * (leaflet.markercluster) para mantener el rendimiento con cientos de marcadores.
- * Los filtros de tipo y estatus se aplican tanto a la lista como al mapa: al
- * elegir "Terrestre" solo se ven/agrupan los terrestres, y así con cada filtro.
- * Al seleccionar un pozo, la cámara vuela a su ubicación y aparece el detalle.
- * Los datos se cargan de forma diferida desde un JSON estático.
+ * Un único mapa Leaflet persistente muestra los pozos agrupados en clústeres.
+ * Los filtros de tipo/estatus se aplican a la lista y al mapa. La barra lateral
+ * es fija en escritorio y un panel deslizante (drawer) en móvil. Al seleccionar
+ * un pozo aparece un panel de detalle que puede contraerse y reabrirse.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -27,7 +25,7 @@ import WellCard from "./WellCard";
 import WellsList, { type TypeFilter, type StatusFilter } from "./WellsList";
 import BrandHeader from "./BrandHeader";
 import HelpDialog from "./HelpDialog";
-import { Loader2, Factory, Waves } from "lucide-react";
+import { Loader2, Factory, Waves, List, X, ChevronUp } from "lucide-react";
 
 const ASIA_CENTER: L.LatLngTuple = [30, 80];
 const ASIA_ZOOM = 3;
@@ -84,16 +82,15 @@ export default function OilWellsMapSplit() {
   const [wells, setWells] = useState<OilWell[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedWell, setSelectedWell] = useState<OilWell | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileListOpen, setMobileListOpen] = useState(false);
   const [filterType, setFilterType] = useState<TypeFilter>("Todos");
   const [filterStatus, setFilterStatus] = useState<StatusFilter>("Todos");
   const [location, setLocation] = useLocation();
 
-  // Ref con el id seleccionado para reaplicar el resaltado tras reconstruir
-  // los clústeres sin re-ejecutar todo el efecto por cada selección.
   const selectedIdRef = useRef<string | null>(null);
   selectedIdRef.current = selectedWell?.id ?? null;
 
-  // Pozos que se muestran en el MAPA (filtrados por tipo y estatus).
   const mapWells = useMemo(
     () =>
       wells.filter(
@@ -113,16 +110,18 @@ export default function OilWellsMapSplit() {
     [wells]
   );
 
-  /** Navegar a un pozo (o a la vista general) y reflejarlo en la URL. */
   const selectWell = (well: OilWell) => {
     urlSyncRef.current = true;
     setSelectedWell(well);
+    setCollapsed(false);
+    setMobileListOpen(false);
     setLocation(`/?well=${slugify(well.nombre)}`);
   };
 
   const backToAsia = () => {
     urlSyncRef.current = true;
     setSelectedWell(null);
+    setCollapsed(false);
     setLocation("/");
   };
 
@@ -194,7 +193,6 @@ export default function OilWellsMapSplit() {
 
     instance.addLayer(group);
     cluster.current = group;
-    // Reaplicar el resaltado al pozo activo (si sigue visible tras el filtro).
     highlightMarkers(markersRef.current, selectedIdRef.current);
 
     return () => {
@@ -213,7 +211,6 @@ export default function OilWellsMapSplit() {
     const selectedId = selectedWell?.id ?? null;
     instance.closePopup();
     highlightMarkers(markersRef.current, selectedId);
-    // Reaplicar tras el vuelo: el marcador puede salir de un clúster al hacer zoom.
     instance.once("moveend", () =>
       highlightMarkers(markersRef.current, selectedId)
     );
@@ -238,36 +235,46 @@ export default function OilWellsMapSplit() {
 
     if (target && target.id !== selectedWell?.id) {
       setSelectedWell(target);
+      setCollapsed(false);
     } else if (!wellName && selectedWell) {
       setSelectedWell(null);
     }
   }, [location, selectedWell, wells]);
 
+  // Contenido de la barra lateral (compartido entre escritorio y móvil).
+  const sidebar = (
+    <>
+      <header className="border-b border-border px-6 py-5">
+        <BrandHeader />
+        <dl className="mt-4 grid grid-cols-3 gap-2">
+          <Stat value={stats.total} label="Pozos" />
+          <Stat value={stats.perforacion} label="Perforando" accent="#F97316" />
+          <Stat value={stats.activos} label="Activos" accent="#FACC15" />
+        </dl>
+      </header>
+      {loading ? (
+        <ListLoader />
+      ) : (
+        <WellsList
+          wells={wells}
+          onSelectWell={selectWell}
+          selectedId={selectedWell?.id ?? null}
+          filterType={filterType}
+          filterStatus={filterStatus}
+          onFilterTypeChange={setFilterType}
+          onFilterStatusChange={setFilterStatus}
+        />
+      )}
+    </>
+  );
+
+  const showTopControls = !selectedWell || collapsed;
+
   return (
     <div className="relative flex h-screen w-full overflow-hidden bg-background">
-      {/* Barra lateral (desktop) */}
+      {/* Barra lateral fija (escritorio) */}
       <aside className="hidden w-80 flex-col border-r border-border bg-sidebar shadow-sm md:flex">
-        <header className="border-b border-border px-6 py-5">
-          <BrandHeader />
-          <dl className="mt-4 grid grid-cols-3 gap-2">
-            <Stat value={stats.total} label="Pozos" />
-            <Stat value={stats.activos} label="Activos" accent="#EF4444" />
-            <Stat value={stats.perforacion} label="Perforando" accent="#F97316" />
-          </dl>
-        </header>
-        {loading ? (
-          <ListLoader />
-        ) : (
-          <WellsList
-            wells={wells}
-            onSelectWell={selectWell}
-            selectedId={selectedWell?.id ?? null}
-            filterType={filterType}
-            filterStatus={filterStatus}
-            onFilterTypeChange={setFilterType}
-            onFilterStatusChange={setFilterStatus}
-          />
-        )}
+        {sidebar}
       </aside>
 
       {/* Columna del mapa */}
@@ -275,26 +282,27 @@ export default function OilWellsMapSplit() {
         <div ref={mapContainer} className="absolute inset-0" />
 
         {/* Marca flotante (móvil) */}
-        <div className="pointer-events-none absolute left-3 top-3 z-[500] rounded-xl border border-border/70 bg-card/90 px-4 py-2.5 shadow-md backdrop-blur-sm md:hidden">
+        <div className="pointer-events-none absolute left-3 top-3 z-[500] rounded-xl border border-border/70 bg-card/90 px-3 py-2 shadow-md backdrop-blur-sm md:hidden">
           <BrandHeader compact />
         </div>
 
-        {/* Botón de ayuda / simbología */}
-        {!selectedWell && (
-          <div className="absolute right-3 top-3 z-[500]">
+        {/* Controles superiores (ayuda + lista en móvil) */}
+        {showTopControls && (
+          <div className="absolute right-3 top-3 z-[600] flex items-center gap-2">
             <HelpDialog />
+            <button
+              type="button"
+              onClick={() => setMobileListOpen(true)}
+              aria-label="Ver lista y filtros"
+              className="flex h-10 items-center gap-1.5 rounded-xl border border-border bg-card/90 px-3 text-sm font-medium text-foreground shadow-md backdrop-blur-sm md:hidden"
+            >
+              <List className="h-4 w-4" />
+              Lista
+            </button>
           </div>
         )}
 
-        {/* Indicador de carga sobre el mapa */}
-        {loading && (
-          <div className="pointer-events-none absolute left-1/2 top-4 z-[500] flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card/90 px-4 py-2 text-sm font-medium text-muted-foreground shadow-md backdrop-blur-sm">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Cargando pozos…
-          </div>
-        )}
-
-        {/* Leyenda / simbología */}
+        {/* Leyenda / simbología (escritorio) */}
         {!loading && (
           <div className="absolute bottom-6 left-3 z-[500] hidden w-52 rounded-xl border border-border bg-card/90 p-3 text-xs shadow-md backdrop-blur-sm md:block">
             <p className="mb-1.5 font-semibold text-foreground">Estatus</p>
@@ -339,16 +347,53 @@ export default function OilWellsMapSplit() {
           </div>
         )}
 
-        {/* Panel de detalle sobre el mapa */}
-        {selectedWell && (
+        {/* Botón para reabrir el detalle contraído */}
+        {selectedWell && collapsed && (
+          <button
+            type="button"
+            onClick={() => setCollapsed(false)}
+            className="absolute bottom-6 left-1/2 z-[900] flex max-w-[80%] -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-xl transition-transform hover:scale-[1.02] md:left-auto md:right-6 md:translate-x-0"
+          >
+            <ChevronUp className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">{selectedWell.nombre}</span>
+          </button>
+        )}
+
+        {/* Panel de detalle */}
+        {selectedWell && !collapsed && (
           <div
             key={selectedWell.id}
-            className="absolute inset-x-0 bottom-0 top-auto z-[1000] h-[78%] animate-in fade-in slide-in-from-bottom-4 rounded-t-2xl border-t border-border bg-card shadow-2xl duration-300 ease-out md:inset-y-0 md:left-auto md:right-0 md:h-full md:w-[420px] md:rounded-none md:border-l md:border-t-0 md:slide-in-from-right-6 md:slide-in-from-bottom-0"
+            className="absolute inset-x-0 bottom-0 top-auto z-[1000] h-[80%] animate-in fade-in slide-in-from-bottom-4 rounded-t-2xl border-t border-border bg-card shadow-2xl duration-300 ease-out md:inset-y-0 md:left-auto md:right-0 md:h-full md:w-[420px] md:max-w-[85%] md:rounded-none md:border-l md:border-t-0 md:slide-in-from-right-6 md:slide-in-from-bottom-0"
           >
-            <WellCard well={selectedWell} onBack={backToAsia} />
+            <WellCard
+              well={selectedWell}
+              onBack={backToAsia}
+              onCollapse={() => setCollapsed(true)}
+            />
           </div>
         )}
       </div>
+
+      {/* Drawer de lista/filtros (móvil) */}
+      {mobileListOpen && (
+        <div className="fixed inset-0 z-[1500] md:hidden" role="dialog" aria-modal="true">
+          <div
+            className="absolute inset-0 bg-foreground/40 backdrop-blur-sm animate-in fade-in duration-200"
+            onClick={() => setMobileListOpen(false)}
+          />
+          <aside className="absolute inset-y-0 left-0 flex w-80 max-w-[86%] flex-col bg-sidebar shadow-2xl animate-in slide-in-from-left duration-300">
+            <button
+              type="button"
+              onClick={() => setMobileListOpen(false)}
+              aria-label="Cerrar lista"
+              className="absolute right-3 top-4 z-10 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            {sidebar}
+          </aside>
+        </div>
+      )}
     </div>
   );
 }
@@ -367,7 +412,7 @@ function Stat({
       <dt className="flex items-center justify-center gap-1 text-base font-bold text-foreground">
         {accent && (
           <span
-            className="inline-block h-2 w-2 rounded-full"
+            className="inline-block h-2 w-2 rounded-full border border-border"
             style={{ backgroundColor: accent }}
           />
         )}
