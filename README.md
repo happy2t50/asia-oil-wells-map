@@ -27,11 +27,11 @@ pozo.
 
 ## 🧰 Requisitos previos
 
-| Herramienta | Versión recomendada | Notas |
-|-------------|--------------------|-------|
-| **Node.js** | **20 LTS** o superior (mínimo 18) | Vite 7 requiere Node ≥ 18. |
-| **npm**     | 9 o superior (viene con Node) | Gestor de paquetes usado por el proyecto. |
-| **Git**     | cualquiera reciente | Para clonar y desplegar. |
+| Herramienta       | Versión recomendada                     | Notas                                     |
+| ----------------- | ---------------------------------------- | ----------------------------------------- |
+| **Node.js** | **20 LTS** o superior (mínimo 18) | Vite 7 requiere Node ≥ 18.               |
+| **npm**     | 9 o superior (viene con Node)            | Gestor de paquetes usado por el proyecto. |
+| **Git**     | cualquiera reciente                      | Para clonar y desplegar.                  |
 
 Verifica tus versiones:
 

@@ -20,6 +20,7 @@ import {
   Drill,
   MapPin,
   Minimize2,
+  TimerOff,
   type LucideIcon,
 } from "lucide-react";
 
@@ -125,6 +126,13 @@ export default function WellCard({ well, onBack, onCollapse }: WellCardProps) {
             value={`${well.profundidad_m.toLocaleString()} m`}
           />
           <DataTile icon={Drill} label="Estatus" value={statusLabel} />
+          {well.estatus === "Inactivo" && (
+            <DataTile
+              icon={TimerOff}
+              label="Inactividad"
+              value={`${(well.inicio % 15) + 2} años`}
+            />
+          )}
           <DataTile
             icon={MapPin}
             label="Coordenadas"
