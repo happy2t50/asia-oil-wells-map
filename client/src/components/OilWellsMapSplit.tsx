@@ -31,6 +31,8 @@ const ASIA_CENTER: L.LatLngTuple = [30, 80];
 const ASIA_ZOOM = 3;
 const WELL_ZOOM = 11;
 const FLY_OPTIONS: L.ZoomPanOptions = { duration: 1.4, easeLinearity: 0.22 };
+const ASIA_GEOJSON_URL =
+  "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson";
 
 const slugify = (name: string) => name.replace(/\s+/g, "-");
 
@@ -76,6 +78,7 @@ export default function OilWellsMapSplit() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const cluster = useRef<L.MarkerClusterGroup | null>(null);
+  const asiaLayer = useRef<L.GeoJSON | null>(null);
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
   const urlSyncRef = useRef(false);
 
@@ -156,7 +159,41 @@ export default function OilWellsMapSplit() {
       maxZoom: 19,
     }).addTo(instance);
 
+    let cancelled = false;
+    fetch(ASIA_GEOJSON_URL)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(
+            `No se pudo cargar la capa de Asia (HTTP ${response.status})`
+          );
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (cancelled) return;
+
+        asiaLayer.current?.remove();
+        asiaLayer.current = L.geoJSON(data, {
+          filter: (feature) => feature?.properties?.CONTINENT === "Asia",
+          interactive: false,
+          style: {
+            color: "#7C5A22",
+            weight: 1.5,
+            opacity: 0.8,
+            fillColor: "#A8792D",
+            fillOpacity: 0.18,
+            lineJoin: "round",
+          },
+        }).addTo(instance);
+      })
+      .catch((err) => {
+        console.error("Error cargando la capa de Asia:", err);
+      });
+
     return () => {
+      cancelled = true;
+      asiaLayer.current?.remove();
+      asiaLayer.current = null;
       instance.remove();
       map.current = null;
       cluster.current = null;
